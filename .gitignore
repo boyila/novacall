@@ -1,0 +1,15 @@
+# Environment — never commit real keys
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Vercel / Railway build artefacts
+.vercel
+.railway
+
+# OS junk
+.DS_Store
+Thumbs.db

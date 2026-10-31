@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08111f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="NovaCall" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="manifest" href="/manifest.json" />
+  <title>NovaCall</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════
+       INCOMING CALL SCREEN
+       Shown when push notification is tapped
+       or when guest joins while host has tab open
+  ══════════════════════════════════════════ -->
+  <div id="incomingCallScreen" class="incoming-screen hidden">
+    <div class="incoming-bg"></div>
+    <div class="incoming-content">
+      <div class="incoming-avatar" id="incomingAvatar">?</div>
+      <div class="incoming-label">Incoming Call</div>
+      <div class="incoming-name" id="incomingCallerName">Someone</div>
+      <p class="incoming-sub">NovaCall · Private Room</p>
+
+      <div class="incoming-actions">
+        <button id="declineBtn" class="call-action decline">
+          <span class="call-icon">✕</span>
+          <span>Decline</span>
+        </button>
+        <button id="acceptBtn" class="call-action accept">
+          <span class="call-icon">📞</span>
+          <span>Accept</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       MAIN APP
+  ══════════════════════════════════════════ -->
+  <div class="bg-orbit"></div>
+  <div class="bg-shadow"></div>
+
+  <main class="shell">
+
+    <!-- HOME: create room -->
+    <section id="homeView" class="panel">
+      <div class="earth-ring">
+        <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1600&auto=format&fit=crop" alt="Earth" />
+      </div>
+      <div class="eyebrow">private voice calls</div>
+      <h1 class="title">NovaCall</h1>
+      <p class="subtitle">Call anyone — no number needed</p>
+
+      <div class="field">
+        <label>Your Name</label>
+        <input id="homeName" type="text" placeholder="Enter your name" autocomplete="name" />
+      </div>
+
+      <button id="createRoomBtn" class="primary">Create Private Room</button>
+
+      <!-- iOS install hint (shown only on iPhone Safari, not in standalone mode) -->
+      <div id="iosInstallHint" class="install-hint hidden">
+        <span>📲</span> Tap <strong>Share</strong> → <strong>Add to Home Screen</strong> to get call notifications
+      </div>
+
+      <p class="note">
+        Share the link with anyone. No app, no sign-up, no phone number required.
+      </p>
+    </section>
+
+    <!-- ROOM VIEW -->
+    <section id="roomView" class="room hidden">
+      <div class="room-top">
+        <div class="earth-ring large">
+          <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=1600&auto=format&fit=crop" alt="Earth" />
+        </div>
+        <div class="eyebrow">secure private voice</div>
+        <h1 class="title" id="roomTitle">NovaCall</h1>
+        <p class="subtitle" id="roomSubtitle">Waiting…</p>
+
+        <div id="connectionPill" class="pill pill-blue">
+          <span class="dot"></span>
+          <span id="pillText">Waiting room ready</span>
+        </div>
+        <div id="timer" class="timer hidden">00:00</div>
+      </div>
+
+      <!-- GUEST INVITE CARD -->
+      <div id="guestJoinCard" class="invite-card hidden">
+        <div class="invite-avatar" id="inviteAvatar">?</div>
+        <div class="invite-from">invited you to a private call</div>
+        <div class="invite-name" id="inviteHostName">Someone</div>
+        <p class="invite-note">No sign-up. No phone number. Just tap to join.</p>
+        <button id="guestJoinBtn" class="primary">Join Call</button>
+      </div>
+
+      <!-- MAIN CALL CARD -->
+      <div class="glass-card" id="mainCard">
+        <div class="field compact">
+          <label>Room Link</label>
+          <div class="link-row">
+            <div id="roomLinkText" class="link-text"></div>
+            <button id="copyBtn" class="chip">Copy</button>
+          </div>
+        </div>
+
+        <div class="participants">
+          <div><span class="label">Host</span> <span id="hostName">—</span></div>
+          <div><span class="label">Guest</span> <span id="guestName">—</span></div>
+        </div>
+
+        <div id="roomHint" class="hint hint-blue">Share the link. Your friend will see a personalised invite.</div>
+
+        <div class="controls">
+          <button id="muteBtn" class="control">
+            <span id="muteIcon">🎤</span>
+            <span id="muteLabel">Mute</span>
+          </button>
+          <button id="joinBtn" class="join">Join<br/>Call</button>
+          <button id="speakerBtn" class="control">
+            <span id="speakerIcon">🔈</span>
+            <span id="speakerLabel">Speaker</span>
+          </button>
+        </div>
+
+        <button id="disconnectBtn" class="hangup-row">
+          <span>✕</span>&ensp;End Call
+        </button>
+
+        <!-- iOS Safari: audio must be attached on a user gesture -->
+        <audio id="remoteAudio" playsinline></audio>
+        <!-- Ring tone for in-tab incoming call -->
+        <audio id="ringAudio" src="/ring.mp3" loop preload="auto"></audio>
+      </div>
+
+      <p class="note" id="bottomNote">
+        Tap Join Call to request microphone access and connect.
+      </p>
+    </section>
+
+  </main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

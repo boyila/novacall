@@ -1,0 +1,14 @@
+{
+  "name": "novacall-turn-fallback-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.8.1",
+    "web-push": "3.6.7"
+  }
+}
