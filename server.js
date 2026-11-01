@@ -237,6 +237,17 @@ io.on("connection", (socket) => {
   });
 });
 
+// Keep-alive ping — prevents Render free tier from sleeping
+// Pings itself every 10 minutes
+if (process.env.NODE_ENV === "production") {
+  const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
+  setInterval(async () => {
+    try {
+      await fetch(`${SELF_URL}/health`);
+    } catch {}
+  }, 10 * 60 * 1000); // every 10 minutes
+}
+
 // Bind to 0.0.0.0 so Fly.io proxy can reach the server
 server.listen(PORT, "0.0.0.0", () => {
   console.log(`NovaCall running on http://0.0.0.0:${PORT}`);
