@@ -161,6 +161,8 @@ io.on("connection", (socket) => {
   socket.on("create-room", ({ roomId, name }) => {
     if (!roomId || !name) return;
     const room = getRoom(roomId);
+    // Clear any pending offline timer from transport-upgrade disconnect
+    if (room._hostDisconnectTimer) { clearTimeout(room._hostDisconnectTimer); room._hostDisconnectTimer = null; }
     room.host = { id: socket.id, name, online: true, joinedAt: Date.now() };
     room.connected = false;
     socket.data.roomId = roomId;
@@ -173,6 +175,8 @@ io.on("connection", (socket) => {
   socket.on("join-room", ({ roomId, name }) => {
     if (!roomId || !name) return;
     const room = getRoom(roomId);
+    // Clear any pending offline timer from transport-upgrade disconnect
+    if (room._guestDisconnectTimer) { clearTimeout(room._guestDisconnectTimer); room._guestDisconnectTimer = null; }
     room.guest = { id: socket.id, name, online: true, joinedAt: Date.now() };
     room.connected = false;
     socket.data.roomId = roomId;
@@ -228,12 +232,35 @@ io.on("connection", (socket) => {
     if (!roomId) return;
     const room = rooms.get(roomId);
     if (!room) return;
-    if (room.host  && room.host.id  === socket.id) room.host.online  = false;
-    if (room.guest && room.guest.id === socket.id) room.guest.online = false;
-    room.connected = false;
-    if (!room.host && !room.guest) { rooms.delete(roomId); return; }
-    io.to(roomId).emit("room-state", serializeRoom(room));
-    io.to(roomId).emit("participant-left", { roomId });
+
+    // Grace period: wait 3s before marking offline in case this is a
+    // Socket.IO transport upgrade (polling → websocket) which fires a
+    // disconnect/reconnect in quick succession on every page load.
+    const gracePeriod = 3000;
+
+    if (room.host && room.host.id === socket.id) {
+      room._hostDisconnectTimer = setTimeout(() => {
+        if (room.host && room.host.id === socket.id) {
+          room.host.online = false;
+          room.connected = false;
+          if (!room.host && !room.guest) { rooms.delete(roomId); return; }
+          io.to(roomId).emit("room-state", serializeRoom(room));
+          io.to(roomId).emit("participant-left", { roomId });
+        }
+      }, gracePeriod);
+    }
+
+    if (room.guest && room.guest.id === socket.id) {
+      room._guestDisconnectTimer = setTimeout(() => {
+        if (room.guest && room.guest.id === socket.id) {
+          room.guest.online = false;
+          room.connected = false;
+          if (!room.host && !room.guest) { rooms.delete(roomId); return; }
+          io.to(roomId).emit("room-state", serializeRoom(room));
+          io.to(roomId).emit("participant-left", { roomId });
+        }
+      }, gracePeriod);
+    }
   });
 });
 

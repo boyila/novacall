@@ -28,8 +28,9 @@ const state = {
   timerHandle: null,
   speakerOn: false,
   audioUnlocked: false,
-  swReg: null,           // service worker registration
+  swReg: null,
   pushSubscribed: false,
+  offerPending: false,   // prevents duplicate offers during room-state bursts
 };
 
 const els = {};
@@ -380,7 +381,9 @@ function createPeerConnection() {
     const s = pc.connectionState;
     console.log("[NovaCall] connectionState:", s);
     if (s === "connected") {
-      state.reconnecting = false; updateConnectedUI(true);
+      state.reconnecting = false;
+      state.offerPending = false;  // reset so re-offer works if call drops and reconnects
+      updateConnectedUI(true);
       if (state.socket && state.roomId) state.socket.emit("peer-connected", { roomId: state.roomId });
     } else if (s === "disconnected" || s === "failed") {
       if (!state.manualDisconnect) {
@@ -468,9 +471,13 @@ function scheduleReconnect() {
 
 function connectSocket() {
   state.socket = io({
-    transports: ["websocket","polling"],
-    reconnection: true, reconnectionDelay: 500,
-    reconnectionDelayMax: 2500, reconnectionAttempts: Infinity,
+    // Force WebSocket only — skip polling to avoid the transport-upgrade
+    // disconnect/reconnect cycle that races with WebRTC negotiation
+    transports: ["websocket"],
+    reconnection: true,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 2500,
+    reconnectionAttempts: Infinity,
   });
 
   state.socket.on("connect", () => {
@@ -488,11 +495,16 @@ function connectSocket() {
     if (!room.guest?.online) state.reconnecting = false;
     updateConnectedUI(false);
 
-    // Host triggers the WebRTC offer when guest comes online
+    // Host triggers the WebRTC offer when guest comes online.
+    // offerPending guard prevents duplicate offers if room-state fires multiple times.
     if (state.role === "host" && room.guest?.online && state.joined && state.localStream && !state.connected) {
-      console.log("[NovaCall] guest online — scheduling offer");
-      if (state.pc && state.pc.signalingState !== "stable") { closePeerConnection(); }
-      setTimeout(() => createOffer(), 500);
+      if (!state.offerPending) {
+        state.offerPending = true;
+        console.log("[NovaCall] guest online — scheduling offer");
+        setTimeout(async () => {
+          await createOffer();
+        }, 500);
+      }
     }
   });
 
@@ -506,7 +518,12 @@ function connectSocket() {
   });
 
   state.socket.on("participant-left", () => {
-    if (!state.manualDisconnect) { state.reconnecting = false; updateConnectedUI(false); updateRoomTexts(); }
+    if (!state.manualDisconnect) {
+      state.reconnecting = false;
+      state.offerPending = false;  // guest left — allow fresh offer when they rejoin
+      updateConnectedUI(false);
+      updateRoomTexts();
+    }
   });
 
   state.socket.on("signal", onSignal);
